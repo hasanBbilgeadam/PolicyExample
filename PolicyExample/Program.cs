@@ -1,3 +1,4 @@
+using FluentValidation;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
@@ -6,6 +7,8 @@ using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using PolicyExample.AppPolicies;
 using PolicyExample.Context;
+using PolicyExample.Dtos;
+using PolicyExample.ValidationRules;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -67,6 +70,19 @@ builder.Services.AddAuthorization(opt =>
 
 
 });
+
+
+//validation rules register
+
+
+
+builder.Services.AddTransient<IValidator<UserLoginDto>, UserLoginDtoValidator>();   
+
+
+
+
+
+/////////////////////
 
 var app = builder.Build();
 

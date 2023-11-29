@@ -1,10 +1,12 @@
-﻿using Microsoft.AspNetCore.Authorization;
+﻿using FluentValidation;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR.Protocol;
 using PolicyExample.Context;
 using PolicyExample.Dtos;
+using PolicyExample.Extentions;
 using PolicyExample.Tokens;
 using System.Runtime.CompilerServices;
 using System.Security.Claims;
@@ -17,11 +19,13 @@ namespace PolicyExample.Controllers
     {
         private readonly UserManager<AppUser> userManager;
         private readonly RoleManager<IdentityRole> roleManager;
+        private readonly IValidator<UserLoginDto> userLoginDtoValidator;
 
-        public AccountController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager)
+        public AccountController(UserManager<AppUser> userManager, RoleManager<IdentityRole> roleManager, IValidator<UserLoginDto> userLoginDtoValidator)
         {
             this.userManager = userManager;
             this.roleManager = roleManager;
+            this.userLoginDtoValidator = userLoginDtoValidator;
         }
 
         [HttpPost("Register")]
@@ -48,6 +52,23 @@ namespace PolicyExample.Controllers
         [HttpPost("Login")]
         public async Task<IActionResult> Login(UserLoginDto dto)
         {
+
+            var validationResult =  userLoginDtoValidator.Validate(dto);
+
+            //if (!validationResult.IsValid)
+            //{
+            //    //var ErrorList = new List<string>();
+            //    //validationResult.Errors.ForEach(x => ErrorList.Add(x.ToString()));
+            //    //return BadRequest(ErrorList);
+
+            //    return BadRequest(validationResult.CustomValidationErrorList());
+            //}
+
+
+
+            if (!validationResult.IsValid)
+                return BadRequest(validationResult.CustomValidationErrorList());
+
             var data = await userManager.FindByNameAsync(dto.UserName);
 
             if (data == null)
