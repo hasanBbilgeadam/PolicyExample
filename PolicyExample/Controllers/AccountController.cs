@@ -1,14 +1,11 @@
 ﻿using FluentValidation;
 using Microsoft.AspNetCore.Authorization;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.SignalR.Protocol;
 using PolicyExample.Context;
 using PolicyExample.Dtos;
 using PolicyExample.Extentions;
 using PolicyExample.Tokens;
-using System.Runtime.CompilerServices;
 using System.Security.Claims;
 
 namespace PolicyExample.Controllers
@@ -32,19 +29,22 @@ namespace PolicyExample.Controllers
         public async Task<IActionResult> Register(UserRegisterDto dto)
         {
 
-           var result = await userManager.CreateAsync(new AppUser()
+            var result = await userManager.CreateAsync(new AppUser()
             {
 
                 UserName = dto.UserName,
                 Email = dto.Email,
                 BirthDay = dto.BirthDay,
                 City = dto.City,
+                Name=dto.Name,
+                SurName=dto.SurName,
+                Balance=0
 
             }, dto.Password);
 
-           
 
-            
+
+
 
             return Ok(result.Succeeded ? "başarılı" : "başarısız");
         }
@@ -53,20 +53,9 @@ namespace PolicyExample.Controllers
         public async Task<IActionResult> Login(UserLoginDto dto)
         {
 
-            var validationResult =  userLoginDtoValidator.Validate(dto);
-
-            //if (!validationResult.IsValid)
-            //{
-            //    //var ErrorList = new List<string>();
-            //    //validationResult.Errors.ForEach(x => ErrorList.Add(x.ToString()));
-            //    //return BadRequest(ErrorList);
-
-            //    return BadRequest(validationResult.CustomValidationErrorList());
-            //}
-
-
-
-            if (!validationResult.IsValid)
+            var validationResult = userLoginDtoValidator.Validate(dto);
+                    
+           if (!validationResult.IsValid)
                 return BadRequest(validationResult.CustomValidationErrorList());
 
             var data = await userManager.FindByNameAsync(dto.UserName);
@@ -76,7 +65,7 @@ namespace PolicyExample.Controllers
                 return BadRequest();
             }
 
-            if (! await userManager.CheckPasswordAsync(data,dto.Password))
+            if (!await userManager.CheckPasswordAsync(data, dto.Password))
             {
                 return BadRequest();
             }
@@ -84,10 +73,10 @@ namespace PolicyExample.Controllers
             TokenGenerator tokenGenerator = new TokenGenerator();
 
 
-            var userClaims = (await userManager.GetClaimsAsync(data)).ToList(); 
-           var RoleClaims = (await userManager.GetRolesAsync(data)).ToList().Select(x=>new Claim(ClaimTypes.Role,x));
+            var userClaims = (await userManager.GetClaimsAsync(data)).ToList();
+            var RoleClaims = (await userManager.GetRolesAsync(data)).ToList().Select(x => new Claim(ClaimTypes.Role, x));
 
-         var userInfoClaims = new List<Claim>()
+            var userInfoClaims = new List<Claim>()
          {
 
              new(ClaimTypes.NameIdentifier,data.Id),
@@ -100,7 +89,7 @@ namespace PolicyExample.Controllers
             userClaims.AddRange(RoleClaims);
             userClaims.AddRange(userInfoClaims);
 
-         var token=    tokenGenerator.GenerateToken(userClaims);
+            var token = tokenGenerator.GenerateToken(userClaims);
 
 
             return Ok(token);
@@ -116,7 +105,7 @@ namespace PolicyExample.Controllers
             if (user == null) { return BadRequest(); }
 
             await userManager.AddClaimAsync(user, new Claim(dto.ClaimType, dto.ClaimValue));
-           
+
             return Ok();
         }
 
@@ -130,7 +119,7 @@ namespace PolicyExample.Controllers
         [HttpGet("FreeAcccessTest")]
         public IActionResult FreeAccessTest()
         {
-            return Ok(User.FindFirst(x=>x.Type=="AccessDate").Value);
+            return Ok(User.FindFirst(x => x.Type == "AccessDate").Value);
         }
 
         ///muhasebe uygula fatura detay 

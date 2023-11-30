@@ -3,12 +3,13 @@ using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Microsoft.IdentityModel.Tokens;
 using PolicyExample.AppPolicies;
 using PolicyExample.Context;
+using PolicyExample.CustomMiddlewares;
 using PolicyExample.Dtos;
 using PolicyExample.ValidationRules;
+using System.Reflection;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -16,14 +17,14 @@ var builder = WebApplication.CreateBuilder(args);
 // Add services to the container.
 
 builder.Services.AddControllers();
-
+builder.Services.AddHttpContextAccessor();
 builder.Services.AddDbContext<AppDbContext>(a =>
 {
     a.UseSqlServer(builder.Configuration.GetConnectionString("MsSqlCon"));
 });
 
-
-builder.Services.AddIdentity<AppUser,IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
+builder.Services.AddAutoMapper(Assembly.GetExecutingAssembly());
+builder.Services.AddIdentity<AppUser, IdentityRole>().AddEntityFrameworkStores<AppDbContext>().AddDefaultTokenProviders();
 
 
 
@@ -35,7 +36,8 @@ builder.Services.AddAuthentication(opt =>
     opt.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
     opt.DefaultChallengeScheme = JwtBearerDefaults.AuthenticationScheme;
 
-}).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opt => {
+}).AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, opt =>
+{
 
     opt.RequireHttpsMetadata = false;
 
@@ -54,7 +56,8 @@ builder.Services.AddAuthentication(opt =>
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
-builder.Services.AddScoped<IAuthorizationHandler,FreeAccesRequirmentHander>();
+builder.Services.AddScoped<IAuthorizationHandler, FreeAccesRequirmentHander>();
+builder.Services.AddScoped<IAuthorizationHandler, SearhRequirementHandler>();
 builder.Services.AddAuthorization(opt =>
 {
 
@@ -68,6 +71,10 @@ builder.Services.AddAuthorization(opt =>
         policy.AddRequirements(new FreeAccesRequirement());
     });
 
+    opt.AddPolicy("SearchFeature", policy =>
+    {
+        policy.AddRequirements(new SearhRequirement());
+    });
 
 });
 
@@ -76,7 +83,7 @@ builder.Services.AddAuthorization(opt =>
 
 
 
-builder.Services.AddTransient<IValidator<UserLoginDto>, UserLoginDtoValidator>();   
+builder.Services.AddTransient<IValidator<UserLoginDto>, UserLoginDtoValidator>();
 
 
 
@@ -101,14 +108,16 @@ using (var scope = app.Services.CreateScope())
         UserName = "AdminAdmin",
         Email = "admin@gmail.com",
 
-    },"Hasan.123");
+    }, "Hasan.123");
 
 
-   var adminUser =   await userManager.FindByEmailAsync("admin@gmail.com");
-   await userManager.AddToRoleAsync(adminUser, "appAdmin");
+    var adminUser = await userManager.FindByEmailAsync("admin@gmail.com");
+    await userManager.AddToRoleAsync(adminUser, "appAdmin");
 }
 
-// Configure the HTTP request pipeline.
+
+app.UseMiddleware<CustomErrorMiddleware>();
+
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();

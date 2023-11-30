@@ -1,6 +1,5 @@
 ﻿
 using FluentValidation.Results;
-using System.Runtime.CompilerServices;
 
 namespace PolicyExample.Extentions
 {
